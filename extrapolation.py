@@ -371,6 +371,108 @@ def set_common_time(Ws, Radii, MinTimeStep=0.005, EarliestTime=-3e300, LatestTim
         Ws[i_W] = Ws[i_W].interpolate(T)
     return
 
+def find_junk_trunc_idx(t_ret, W, NAvg=50, tol=0.0005):
+    """
+    Helper function for 'chop_junk'
+    """
+    from scipy.signal import find_peaks
+    half_cut = np.abs(t_ret - (t_ret[-1] - t_ret[0])/2).argmin()
+    phase = np.unwrap(np.angle(W.data[:half_cut,0]))
+    d_phase = np.gradient(phase)
+    peak_idxs = find_peaks(d_phase)[0]
+    mins_idxs = find_peaks(-d_phase)[0]
+    sep_idxs = np.sort(np.append(peak_idxs, mins_idxs))
+    sep_times = t_ret[sep_idxs]
+    zero_sep_time_idx = np.abs(sep_times).argmin()
+    sep_idxs = sep_idxs[zero_sep_time_idx:]
+    peak_diffs = np.abs(d_phase[sep_idxs][1:]-d_phase[sep_idxs][:-1])
+    for i in range(len(peak_diffs)):
+        RMS_avg = np.sqrt(np.mean(peak_diffs[i:i+NAvg]**2))
+        if RMS_avg < tol:
+            for j in range(NAvg):
+                if peak_diffs[i+j] < tol:
+                    trunc_idx = sep_idxs[i+j]
+                    return trunc_idx
+    raise Exception('Was not able to find where the junk ends')
+
+
+def perform_truncation(ws, Radii, junk_trunc_time):
+    """
+    Helper function for 'chop_junk'
+    """
+    for R in reversed(range(len(Radii))):
+        start_idx = np.abs(ws[R].t - junk_trunc_time).argmin()
+        ws[R].t = ws[R].t[start_idx:]
+        ws[R].data = ws[R].data[start_idx:,:]
+        Radii[R] = Radii[R][start_idx:]
+        if R < len(Radii)-1:
+            end_idx = len(ws[-1].t)
+            ws[R].t = ws[R].t[:end_idx]
+            ws[R].data = ws[R].data[:end_idx,:]
+            Radii[R] = Radii[R][:end_idx]
+
+
+def chop_junk(ws, Radii, overwrite=True):
+    NRadii = len(ws)
+    trunc_time = 0
+    for R in range(NRadii):
+        trunc_idx = find_junk_trunc_idx(ws[R].t,ws[R])
+        if ws[R].t[trunc_idx] > trunc_time:
+            trunc_time = ws[R].t[trunc_idx]
+    if overwrite:
+        perform_truncation(ws, Radii, trunc_time)
+        return
+    else:
+        import copy
+        new_ws = copy.deepcopy(ws)
+        new_Radii = copy.deepcopy(Radii)
+        perform_truncation(new_ws, Radii, trunc_time)
+        return new_ws, new_Radii
+
+
+def tune_t(Ws, Radii):
+    NRadii = len(Ws)
+    from scipy import optimize, interpolate
+    S = []
+    S_real = []
+    for R in range(NRadii):
+        S.append(interpolate.InterpolatedUnivariateSpline(Ws[R].t, np.unwrap(np.angle(Ws[R].data[:,0])),ext=2))
+        S_real.append(interpolate.InterpolatedUnivariateSpline(Ws[R].t, np.real(Ws[R].data[:,0]),ext=2))
+
+    old_t = []
+    new_t = []
+    for R in range(NRadii-1):
+        old_t_holder = []
+        new_t_holder = []
+        for i in range(len(Ws[-1].t)):
+            try:
+                res = optimize.root_scalar(lambda x: S[R](x)-S[-1](Ws[-1].t[i]), bracket=(Ws[R].t[0], Ws[R].t[-1]), method='brentq')
+                if res.converged:
+                    old_t_holder.append(res.root)
+                    new_t_holder.append(Ws[-1].t[i])
+            except ValueError:
+                pass
+        old_t.append(np.array(old_t_holder))
+        new_t.append(np.array(new_t_holder))
+
+    time_map = []
+    for R in range(NRadii-1):
+        time_map.append(interpolate.InterpolatedUnivariateSpline(old_t[R], new_t[R],ext=2))
+
+    for R in range(NRadii-1):
+        valid_range = []
+        for search_range in [range(len(Ws[R].t)), reversed(range(len(Ws[R].t)))]:
+            for i in search_range:
+                try:
+                    time_map[R](Ws[R].t[i])
+                    valid_range.append(i)
+                    break
+                except ValueError:
+                    pass
+        Ws[R].t = time_map[R](Ws[R].t[valid_range[0]:valid_range[1]+1])
+        Ws[R].data = Ws[R].data[valid_range[0]:valid_range[1]+1,:]
+        Radii[R] = Radii[R][valid_range[0]:valid_range[1]+1]
+
 
 def extrapolate(**kwargs):
     """Perform extrapolations from finite-radius data
@@ -565,6 +667,10 @@ def extrapolate(**kwargs):
     # Figure out which is the outermost data
     SortedRadiiIndices = sorted(range(len(CoordRadii)), key=lambda k: float(CoordRadii[k]))
     i_outer = SortedRadiiIndices[-1]
+
+    chop_junk(Ws, Radii, overwrite=True)
+    print("Syncing time on extraction shells")
+    tune_t(Ws, Radii)
 
     # Convert to c++ objects and interpolate to common times
     print("Interpolating to common times...");
