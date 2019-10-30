@@ -668,3 +668,255 @@ def create_fake_finite_radius_strain_h5file(
                             f"Im[rh]_l{l}_m{m}(R={coord_radii[i]}.00)",
                         ],
                     )
+
+
+def schwarzschild(times, ell_max):
+    """
+    Returns a dictionary of WaveformModes objects of the GW strain and Weyl scalars in
+    a Schwarzschild spacetime.
+    
+    Parameters
+    ----------
+    
+    times: numpy.ndarray
+        Time series to be used for the WaveformModes
+    ell_max: int
+        Highest value of ell for the mode data. Must be larger than 2.
+        
+    Returns
+    -------
+    WMs: dict of WaveformModes
+    """
+
+    if ell_max < 2:
+      raise ValueError("ell_max must be larger than 2")
+
+    n_times = times.shape[0]
+    n_modes = (ell_max + 1) ** 2
+    data = np.zeros((times.shape[0], n_modes), dtype=complex)
+    psi2_data = data.copy()
+    psi2_data[:, sf.LM_index(0, 0, 0)] = sf.constant_as_ell_0_mode(-1)
+
+    WMs = {}
+    WMs["h"] = scri.WaveformModes(
+        t=times,
+        ell_max=ell_max,
+        ell_min=2,
+        data=data[:, sf.LM_index(2, -2, 0) :],
+        dataType=scri.h,
+        frameType=scri.Inertial,
+        m_is_scaled_out=True,
+        r_is_scaled_out=True,
+    )
+    WMs["Psi4"] = scri.WaveformModes(
+        t=times,
+        ell_max=ell_max,
+        ell_min=2,
+        data=data[:, sf.LM_index(2, -2, 0) :],
+        dataType=scri.psi4,
+        frameType=scri.Inertial,
+        m_is_scaled_out=True,
+        r_is_scaled_out=True,
+    )
+    WMs["Psi3"] = scri.WaveformModes(
+        t=times,
+        ell_max=ell_max,
+        ell_min=1,
+        data=data[:, sf.LM_index(1, -1, 0) :],
+        dataType=scri.psi3,
+        frameType=scri.Inertial,
+        m_is_scaled_out=True,
+        r_is_scaled_out=True,
+    )
+    WMs["Psi2"] = scri.WaveformModes(
+        t=times,
+        data=psi2_data,
+        ell_max=ell_max,
+        ell_min=0,
+        dataType=scri.psi2,
+        frameType=scri.Inertial,
+        m_is_scaled_out=True,
+        r_is_scaled_out=True,
+    )
+    WMs["Psi1"] = scri.WaveformModes(
+        t=times,
+        ell_max=ell_max,
+        ell_min=1,
+        data=data[:, sf.LM_index(1, -1, 0) :],
+        dataType=scri.psi1,
+        frameType=scri.Inertial,
+        m_is_scaled_out=True,
+        r_is_scaled_out=True,
+    )
+    WMs["Psi0"] = scri.WaveformModes(
+        t=times,
+        ell_max=ell_max,
+        ell_min=2,
+        data=data[:, sf.LM_index(2, -2, 0) :],
+        dataType=scri.psi0,
+        frameType=scri.Inertial,
+        m_is_scaled_out=True,
+        r_is_scaled_out=True,
+    )
+
+    return WMs
+
+
+def teukolsky_M0_even(times, ell_max, amp=1.0, r0=0.0, width=1.0):
+    """
+    Returns a dictionary of WaveformModes objects of the GW strain and Weyl scalars 
+    for an outgoing M=0 even parity Teukolsky wave with a Gaussian profile defined
+    by:
+
+    F0 = amp * np.exp(-(u-r0)/width**2)
+
+    The factor of 1/2 is omitted in the exponent for agreement with the Spectral
+    Einstein Code.
+    
+    Parameters
+    ----------
+    
+    times: numpy.ndarray
+        Time series to be used for the WaveformModes
+    ell_max: int
+        Highest value of ell for the mode data
+    amp: float
+        Amplitude of the Gaussian
+    r0: float
+        Center of the Gaussian profile at time=0
+    width: float
+        Width of the Gaussian profile
+        
+    Returns
+    -------
+    WMs: dict of WaveformModes
+    """
+
+    if ell_max < 2:
+      raise ValueError("ell_max must be larger than 2")
+
+    def TeukPsi4(u, theta, amp, r0, width):
+        return (
+            amp
+            * (
+                -48 * r0 ** 6
+                + 90.0 * width ** 6
+                + 288.0 * r0 ** 5 * u
+                - 540.0 * width ** 4 * u ** 2
+                + 360.0 * width ** 2 * u ** 4
+                - 48 * u ** 6
+                + r0 ** 4 * (360.0 * width ** 2 - 720.0 * u ** 2)
+                + r0 ** 3 * (-1440.0 * width ** 2 * u + 960.0 * u ** 3)
+                + r0 ** 2
+                * (-540.0 * width ** 4 + 2160.0 * width ** 2 * u ** 2 - 720.0 * u ** 4)
+                + r0
+                * (1080.0 * width ** 4 * u - 1440.0 * width ** 2 * u ** 3 + 288.0 * u ** 5)
+            )
+            * np.sin(theta) ** 2
+        ) / (np.exp((r0 - u) ** 2 / width ** 2) * width ** 12)
+    
+    
+    def TeukPsi3(u, theta, amp, r0, width):
+        return (
+            -6
+            * amp
+            * (r0 - u)
+            * (
+                4 * r0 ** 4
+                + 15 * width ** 4
+                - 16 * r0 ** 3 * u
+                - 20 * width ** 2 * u ** 2
+                + 4 * u ** 4
+                + 4 * r0 ** 2 * (-5 * width ** 2 + 6 * u ** 2)
+                + 8 * r0 * (5 * width ** 2 * u - 2 * u ** 3)
+            )
+            * np.sin(2 * theta)
+        ) / (np.exp((r0 - u) ** 2 / width ** 2) * width ** 10)
+    
+    
+    def TeukPsi2(u, theta, amp, r0, width):
+        return (
+            amp
+            * (
+                1.0 * r0 ** 4
+                + 0.75 * width ** 4
+                - 4.0 * r0 ** 3 * u
+                - 3.0 * width ** 2 * u ** 2
+                + 1.0 * u ** 4
+                + r0 ** 2 * (-3.0 * width ** 2 + 6.0 * u ** 2)
+                + r0 * (6.0 * width ** 2 * u - 4.0 * u ** 3)
+            )
+            * (-24.0 + 36.0 * np.sin(theta) ** 2)
+        ) / (np.exp((r0 - u) ** 2 / width ** 2) * width ** 8)
+    
+    
+    def TeukPsi1(u, theta, amp, r0, width):
+        return (
+            9
+            * amp
+            * (-3 * width ** 2 + 2 * (r0 - u) ** 2)
+            * (r0 - u)
+            * np.cos(theta)
+            * np.sin(theta)
+        ) / (np.exp((r0 - u) ** 2 / width ** 2) * width ** 6)
+    
+    
+    def TeukPsi0(u, theta, amp, r0, width):
+        return (
+            amp
+            * (-4.5 * r0 ** 2 + 2.25 * width ** 2 + 9 * r0 * u - 4.5 * u ** 2)
+            * np.sin(theta) ** 2
+        ) / (np.exp((r0 - u) ** 2 / width ** 2) * width ** 4)
+    
+    
+    def Teuk_h(u, theta, amp, r0, width):
+        return (
+            amp
+            * (
+                12.0 * r0 ** 4
+                + 9.0 * width ** 4
+                - 48.0 * r0 ** 3 * u
+                - 36.0 * width ** 2 * u ** 2
+                + 12.0 * u ** 4
+                + r0 ** 2 * (-36.0 * width ** 2 + 72.0 * u ** 2)
+                + r0 * (72.0 * width ** 2 * u - 48.0 * u ** 3)
+            )
+            * np.sin(theta) ** 2
+        ) / (np.exp((r0 - u) ** 2 / width ** 2) * width ** 8)
+
+    n_theta = 2 * ell_max + 1
+    n_phi = 2 * ell_max + 1
+
+    operator = {
+        "h": Teuk_h,
+        "Psi4": TeukPsi4, 
+        "Psi3": TeukPsi3, 
+        "Psi2": TeukPsi2,
+        "Psi1": TeukPsi1,
+        "Psi0": TeukPsi0,
+        }
+
+    WMs = {}
+    for data_type in ["h", "Psi4", "Psi3", "Psi2", "Psi1", "Psi0"]:
+        grid_data = (
+            np.array(
+                [
+                    operator[data_type](times, theta, amp, r0, width)
+                    for theta in np.linspace(0, np.pi, n_theta)
+                ]
+            ).T[:, :, np.newaxis]
+            * np.ones(n_phi)[np.newaxis, np.newaxis, :]
+        )
+        grid_data = grid_data.reshape(times.shape[0], n_theta * n_phi).astype(complex)
+        WMs[data_type] = scri.WaveformGrid(
+            t=times,
+            data=grid_data,
+            n_theta=n_theta,
+            n_phi=n_phi,
+            dataType=scri.DataNames.index(data_type),
+            frameType=scri.Inertial,
+            r_is_scaled_out=True,
+            m_is_scaled_out=True,
+        ).to_modes()
+
+    return WMs
