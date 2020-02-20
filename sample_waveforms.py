@@ -920,3 +920,115 @@ def teukolsky_M0_even(times, ell_max, amp=1.0, r0=0.0, width=1.0):
         ).to_modes()
 
     return WMs
+
+
+def fake_Bondi_data(times, ell_max=2, n_wavelengths=5):
+    """
+    Returns a dictionary of WaveformModes objects of the GW strain and Weyl scalars 
+    for artificial asymptotic data in every mode for ell >=2. This is simple sinusoidal
+    data that is constructed by definition to satisfy the Bondi gauge Bianchi identities.
+    
+    Parameters
+    ----------
+    
+    times: numpy.ndarray
+        Time series to be used for the WaveformModes
+    ell_min: int > 1
+        Smallest value of ell for the mode data
+    ell_max: int
+        Highest value of ell for the mode data
+    n_wavelengths: int, optional (default: 5)
+        The number of wavelengths in the m=2 modes
+        
+    Returns
+    -------
+    WMs: dict of WaveformModes
+    """
+
+    def mode_multiply(WG_A, WM_B):
+        WG_B = WM_B.to_grid()
+        product_data = np.conjugate(WG_A.data) * WG_B.data
+        if   WG_B.dataType == scri.psi4: new_dataType = scri.psi2
+        elif WG_B.dataType == scri.psi3: new_dataType = scri.psi1
+        elif WG_B.dataType == scri.psi2: new_dataType = scri.psi0
+        WG_C = WG_A.copy_without_data()
+        WG_C.dataType = new_dataType
+        WG_C.t, WG_C.data = WG_A.t, product_data
+        return WG_C.to_modes(WM_B.ell_max)
+
+    if ell_max < 2:
+        raise ValueError("ell_max must be greater than 1")
+    ell_min = 2
+    data = np.zeros((times.shape[0], (ell_max + 1) ** 2 - ell_min ** 2), dtype=complex)
+    final_time = times[-1]
+    for l in range(ell_min, ell_max + 1):
+        for m in range(1, l + 1):
+            data[:, sf.LM_index(l, m, ell_min)] = (
+                np.cos(n_wavelengths * m * np.pi * times / final_time)
+                + 1j * np.sin(n_wavelengths * m * np.pi * times / final_time)
+            ) / l
+            data[:, sf.LM_index(l, -m, ell_min)] = (-1) ** m * data[
+                :, sf.LM_index(l, m, ell_min)
+            ].conjugate()
+        data[:, sf.LM_index(l, 0, ell_min)] = times ** 2 / l
+
+    WMs = {}
+    WMs["h"] = scri.WaveformModes(
+        dataType=scri.h,
+        t=times,
+        data=data,
+        ell_min=ell_min,
+        ell_max=ell_max,
+        r_is_scaled_out=True,
+        m_is_scaled_out=False,
+        frameType=scri.Inertial,
+    )
+
+    WMs["Psi4"] = WMs["h"].copy()
+    WMs["Psi4"].dataType = scri.psi4
+    WMs["Psi4"].data = -WMs["Psi4"].data_ddot
+
+    WMs["Psi3"] = scri.WaveformModes(
+        dataType=scri.psi3,
+        t=times,
+        data=np.zeros((times.shape[0],(ell_max+1)**2-1), dtype=complex),
+        ell_min=1,
+        ell_max=ell_max,
+        r_is_scaled_out=True,
+        m_is_scaled_out=False,
+        frameType=scri.Inertial,
+    )
+    WMs["Psi3"].data[:,sf.LM_index(2,-2,1):] = 0.5 * WMs["Psi4"].eth
+    WMs["Psi3"].data = -WMs["Psi3"].data_int
+
+    h_grid = WMs["h"].to_grid()
+    for n in reversed(range(0, 3)):
+        WMs["Psi{}".format(n)] = scri.WaveformModes(
+            dataType=scri.DataType[n+1],
+            t=times,
+            data=np.zeros((times.shape[0],(ell_max+1)**2-(n-2)**2), dtype=complex),
+            ell_min=2-n,
+            ell_max=ell_max,
+            r_is_scaled_out=True,
+            m_is_scaled_out=False,
+            frameType=scri.Inertial,
+        )
+        WMs["Psi{}".format(n)].data = (
+            (3 - n) * mode_multiply(h_grid, WMs["Psi{}".format(n + 2)]).data
+        )
+        if n == 2:
+          idx_start_0 = sf.LM_index(1,-1,0)
+          idx_start_1 = sf.LM_index(1,-1,1)
+        elif n == 1:
+          idx_start_0 = sf.LM_index(1,-1,1)
+          idx_start_1 = sf.LM_index(1,-1,0)
+        elif n == 0:
+          idx_start_0 = sf.LM_index(2,-2,2)
+          idx_start_1 = sf.LM_index(2,-2,1)
+
+        WMs["Psi{}".format(n)].data[:,idx_start_0:] -= (
+            0.5 * WMs["Psi{}".format(n + 1)].eth[:,idx_start_1:]
+        )
+        WMs["Psi{}".format(n)].data = WMs["Psi{}".format(n)].data_int
+
+    return WMs
