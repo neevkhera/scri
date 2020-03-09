@@ -72,7 +72,7 @@ DataNames = ["UnknownDataType", "Psi0", "Psi1", "Psi2", "Psi3", "Psi4", "sigma",
 SpinWeights = [sys.maxsize, 2, 1, 0, -1, -2, 2, -2, -2, -2, sys.maxsize]
 ConformalWeights = [sys.maxsize, 2, 1, 0, -1, -2, 1, 0, -1, -1, -3]
 RScaling = [sys.maxsize, 5, 4, 3, 2, 1, 2, 1, 1, 1, 0]
-MScaling = [sys.maxsize, 2, 2, 2, 2, 2, 0, 0, 1, 1, 2]
+MScaling = [sys.maxsize, 2, 2, 2, 2, 2, 1, 0, 1, 1, 2]
 DataNamesLaTeX = [r"\mathrm{unknown data type}", r"\psi_0", r"\psi_1", r"\psi_2", r"\psi_3", r"\psi_4", r"\sigma", r"h",
                   r"\dot{h}", r"\mathrm{n}", r"\psi_n"]
 # It might also be worth noting that:

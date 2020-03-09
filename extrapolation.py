@@ -328,6 +328,9 @@ def read_finite_radius_waveform(
         if DataType == scri.h:
             UnitScaleFactor = 1.0 / ChMass
             RadiusRatioExp = 1.0
+        elif DataType == scri.sigma:
+            UnitScaleFactor = 1.0 / ChMass
+            RadiusRatioExp = 2.0
         elif DataType == scri.hdot:
             UnitScaleFactor = 1.0
             RadiusRatioExp = 1.0
@@ -434,6 +437,8 @@ def read_finite_radius_data(
             DataType = scri.hdot
         elif "h" in DataType.lower():
             DataType = scri.h
+        elif "sigma" in DataType.lower():
+            DataType = scri.sigma
         elif "psi4" in DataType.lower():
             DataType = scri.psi4
         elif "psi3" in DataType.lower():
@@ -448,7 +453,7 @@ def read_finite_radius_data(
             DataType = scri.UnknownDataType
             message = (
                 "The file '{0}' does not contain a recognizable description "
-                + "of the data type ('h', 'psi4', 'psi3', 'psi2', 'psi1', 'psi0')."
+                + "of the data type ('hdot', 'h', 'sigma', 'psi4', 'psi3', 'psi2', 'psi1', 'psi0')."
             )
             raise ValueError(message.format(filename))
         PrintedLine = ""
@@ -658,6 +663,8 @@ def extrapolate(**kwargs):
         DataType = scri.hdot
     elif "h" in DataType.lower():
         DataType = scri.h
+    elif "sigma" in DataType.lower():
+        DataType = scri.sigma
     elif "psi4" in DataType.lower():
         DataType = scri.psi4
     elif "psi3" in DataType.lower():
@@ -672,7 +679,7 @@ def extrapolate(**kwargs):
         DataType = scri.UnknownDataType
         message = (
             "The file '{0}' does not contain a recognizable description of "
-            + "the data type ('h', 'psi4', 'psi3', 'psi2', 'psi1', 'psi0')."
+            + "the data type ('hdot', 'h', 'sigma', 'psi4', 'psi3', 'psi2', 'psi1', 'psi0')."
         )
         raise ValueError(message.format(filename))
 
@@ -1300,6 +1307,13 @@ def FindPossibleExtrapolationsToRun(TopLevelInputDir):
                         [
                             step[0].replace(TopLevelInputDir + "/", ""),
                             "rh_FiniteRadii_CodeUnits.h5",
+                        ]
+                    )
+                if "r2sigma_FiniteRadii_CodeUnits.h5" in step[2]:
+                    SubdirectoriesAndDataFiles.append(
+                        [
+                            step[0].replace(TopLevelInputDir + "/", ""),
+                            "r2sigma_FiniteRadii_CodeUnits.h5",
                         ]
                     )
                 if "rPsi4_FiniteRadii_CodeUnits.h5" in step[2]:
