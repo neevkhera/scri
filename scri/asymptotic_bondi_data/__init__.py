@@ -99,6 +99,10 @@ class AsymptoticBondiData:
         return self._psi2.ell_max
 
     @property
+    def LM(self):
+        return self.psi2.LM
+
+    @property
     def sigma(self):
         return self._sigma
 

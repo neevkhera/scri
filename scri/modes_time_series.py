@@ -121,6 +121,10 @@ class ModesTimeSeries(spherical_functions.Modes):
         return self.antiderivative(2)
 
     @property
+    def LM(self):
+        return np.array([[ell, m] for ell in range(self.ell_min, self.ell_max + 1) for m in range(-ell, ell + 1)])
+
+    @property
     def eth_GHP(self):
         """Raise spin-weight with GHP convention"""
         return self.eth / np.sqrt(2)
