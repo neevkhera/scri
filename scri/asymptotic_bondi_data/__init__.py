@@ -156,6 +156,14 @@ class AsymptoticBondiData:
         self._psi0[:] = psi0prm
         return self.psi0
 
+    def copy(self):
+        import copy
+
+        new_abd = type(self)(self.t, self.ell_max)
+        state = copy.deepcopy(self.__dict__)
+        new_abd.__dict__.update(state)
+        return new_abd
+
     from .from_initial_values import from_initial_values
 
     from .constraints import (
