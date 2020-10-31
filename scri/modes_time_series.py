@@ -60,6 +60,10 @@ class ModesTimeSeries(spherical_functions.Modes):
         self._metadata["time"][:] = new_time
         return self.time
 
+    @property
+    def n_times(self):
+        return self.time.size
+
     u = time
 
     t = time
