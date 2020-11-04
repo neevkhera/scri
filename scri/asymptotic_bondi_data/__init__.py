@@ -1,6 +1,7 @@
 import numpy as np
 from spherical_functions import LM_total_size
 from .. import ModesTimeSeries
+from .. import Inertial
 
 
 class AsymptoticBondiData:
@@ -30,7 +31,7 @@ class AsymptoticBondiData:
 
     """
 
-    def __init__(self, time, ell_max, multiplication_truncator=sum):
+    def __init__(self, time, ell_max, multiplication_truncator=sum, frameType=Inertial):
         """Create new storage for asymptotic Bondi data
 
         Parameters
@@ -60,6 +61,8 @@ class AsymptoticBondiData:
             raise ValueError(f"Input `time` parameter must have dtype float; it has dtype {time.dtype}")
         ModesTS = functools.partial(ModesTimeSeries, ell_max=ell_max, multiplication_truncator=multiplication_truncator)
         shape = [6, time.size, LM_total_size(0, ell_max)]
+        self.frame = np.array([])
+        self.frameType = frameType
         self._time = time.copy()
         self._raw_data = np.zeros(shape, dtype=complex)
         self._psi0 = ModesTS(self._raw_data[0], self._time, spin_weight=2)
