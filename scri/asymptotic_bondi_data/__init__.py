@@ -167,6 +167,26 @@ class AsymptoticBondiData:
         new_abd.__dict__.update(state)
         return new_abd
 
+    def interpolate(self, new_times):
+        new_abd = type(self)(new_times, self.ell_max)
+        new_abd.frameType = self.frameType
+        # interpolate waveform data
+        new_abd.sigma = self.sigma.interpolate(new_times)
+        new_abd.psi4 = self.psi4.interpolate(new_times)
+        new_abd.psi3 = self.psi3.interpolate(new_times)
+        new_abd.psi2 = self.psi2.interpolate(new_times)
+        new_abd.psi1 = self.psi1.interpolate(new_times)
+        new_abd.psi0 = self.psi0.interpolate(new_times)
+        # interpolate frame data if necessary
+        if self.frame.shape[0] == self.n_times:
+            from scipy.interpolate import CubicSpline
+            import quaternion
+
+            frame = quaternion.as_float_array(self.frame)
+            new_frame = CubicSpline(self.t, frame, axis=0)(new_times)
+            new_abd.frame = quaternion.as_quat_array(new_frame)
+        return new_abd
+
     from .from_initial_values import from_initial_values
 
     from .constraints import (
