@@ -111,7 +111,9 @@ from .mode_calculations import (
     corotating_frame,
     inner_product,
 )
-from .flux import energy_flux, momentum_flux, angular_momentum_flux, poincare_fluxes
+
+from .flux import energy_flux, momentum_flux, angular_momentum_flux, poincare_fluxes, boost_flux
+
 
 WaveformModes.LdtVector = LdtVector
 WaveformModes.LVector = LVector
@@ -137,7 +139,8 @@ WaveformModes.align_decomposition_frame_to_modes = align_decomposition_frame_to_
 WaveformModes.energy_flux = energy_flux
 WaveformModes.momentum_flux = momentum_flux
 WaveformModes.angular_momentum_flux = angular_momentum_flux
-WaveformModes.poincare_fluxes = poincare_fluxes
+WaveformModes.boost_flux = boost_flux
+
 
 from .waveform_grid import WaveformGrid
 
@@ -183,3 +186,4 @@ __all__ = [
     "m_sun_in_seconds",
     "parsec_in_meters",
 ]
+
