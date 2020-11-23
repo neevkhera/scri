@@ -203,6 +203,13 @@ class AsymptoticBondiData:
             return self.psi0
 
     def speciality_index(self, **kwargs):
+        """Computes the Baker-Campanelli speciality index (arXiv:gr-qc/0003031). NOTE: This quantity can only 
+        determine algebraic speciality but can not determine the type! The rule of thumb given by Baker and
+        Campanelli is that for an algebraically special spacetime the speciality index should differ from unity 
+        by no more than a factor of two.
+
+        """
+
         import spinsfast
         import spherical_functions as sf
         from spherical_functions import LM_index
@@ -250,7 +257,7 @@ class AsymptoticBondiData:
         speciality_index_modes = speciality_index_modes[:, : LM_index(output_ell_max, output_ell_max, 0) + 1]
         speciality_index_modes = ModesTimeSeries(
             sf.SWSH_modes.Modes(
-                speciality_index_modes, spin_weight=0, ell_min=0, ell_max=output_ell_max, multiplication_truncator=max,
+                speciality_index_modes, spin_weight=0, ell_min=0, ell_max=output_ell_max, multiplication_truncator=max
             ),
             time=self.t,
         )
