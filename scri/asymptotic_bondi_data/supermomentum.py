@@ -92,6 +92,56 @@ def bondi_spin(self):
     angular_momentum = self.bondi_angular_momentum()
     return (angular_momentum / rest_mass).T
 
+def bondi_boost_charge(self):
+    """Compute the Bondi boost charge vector via Eq. (8) in T. Dray (1985) [DOI:10.1088/0264-9381/2/1/002].
+     This gives the boost charge corresponding to the boost with origin at t=0."""
+    from spherical_functions import LM_index
+
+    Q = (
+        self.psi1
+        + self.sigma.grid_multiply(self.sigma.bar.eth_GHP)
+        + 0.5 * (self.sigma.grid_multiply(self.sigma.bar)).eth_GHP
+        - self.t * (
+            self.psi2 + self.sigma.grid_multiply(self.sigma.bar.dot)
+            ).real.eth_GHP
+    ).ndarray
+    boost_charge = np.real(
+        1
+        / np.sqrt(24 * np.pi)
+        * np.array(
+            [
+                Q[:, LM_index(-1, 1, 0)] - Q[:, LM_index(1, 1, 0)],
+                -1j * (Q[:, LM_index(-1, 1, 0)] + Q[:, LM_index(1, 1, 0)]),
+                np.sqrt(2) * Q[:, LM_index(1, 0, 0)],
+            ]
+        )
+    )
+    return boost_charge
+
+def bondi_comoving_CoM(self):
+    """Compute the comoving center of mass vector defined as K^i + t*P^i where K^i is the boost charge and 
+    P^i is the momentum. See discussion in arXiv:1912.03164. """
+    from spherical_functions import LM_index
+
+    Q = (
+        self.psi1
+        + self.sigma.grid_multiply(self.sigma.bar.eth_GHP)
+        + 0.5 * (self.sigma.grid_multiply(self.sigma.bar)).eth_GHP
+    ).ndarray
+    charge = np.real(
+        1
+        / np.sqrt(24 * np.pi)
+        * np.array(
+            [
+                Q[:, LM_index(-1, 1, 0)] - Q[:, LM_index(1, 1, 0)],
+                -1j * (Q[:, LM_index(-1, 1, 0)] + Q[:, LM_index(1, 1, 0)]),
+                np.sqrt(2) * Q[:, LM_index(1, 0, 0)],
+            ]
+        )
+    )
+    return charge
+    
+
 
 def supermomentum(self, supermomentum_def, integrated=False):
     """Computes the supermomentum of the asymptotic Bondi data. Allows for several different definitions

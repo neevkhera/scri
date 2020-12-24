@@ -278,7 +278,15 @@ class AsymptoticBondiData:
     )
 
     from .transformations import transform
-    from .supermomentum import supermomentum, mass_aspect, bondi_four_momentum, bondi_angular_momentum, bondi_spin
+    from .supermomentum import (
+        supermomentum, 
+        mass_aspect, 
+        bondi_four_momentum, 
+        bondi_angular_momentum, 
+        bondi_spin,
+        bondi_boost_charge,
+        bondi_comoving_CoM
+    )
     from .frame_rotations import (
         to_inertial_frame,
         to_corotating_frame,
