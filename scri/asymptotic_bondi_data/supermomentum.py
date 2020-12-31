@@ -106,7 +106,7 @@ def bondi_boost_charge(self):
             ).real.eth_GHP
     ).ndarray
     boost_charge = np.real(
-        1
+        -1
         / np.sqrt(24 * np.pi)
         * np.array(
             [
@@ -129,7 +129,7 @@ def bondi_comoving_CoM(self):
         + 0.5 * (self.sigma.grid_multiply(self.sigma.bar)).eth_GHP
     ).ndarray
     charge = np.real(
-        1
+        -1
         / np.sqrt(24 * np.pi)
         * np.array(
             [
